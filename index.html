@@ -119,9 +119,26 @@
           const button = document.createElement("button");
           button.className = "action";
           button.textContent = label;
-          button.onclick = () => alert(
-            "এটি ডেমো বাটন। GPS ও Database সংযোগ এখনো বাকি।"
-          );
+          button.onclick = () => {
+  if (!navigator.geolocation) {
+    alert("এই ব্রাউজারে GPS সাপোর্ট নেই।");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    () => {
+      alert("GPS কাজ করছে! লোকেশন পাওয়া গেছে।");
+    },
+    (error) => {
+      alert("GPS লোকেশন পাওয়া যায়নি। Error: " + error.message);
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    }
+  );
+};
           content.appendChild(button);
         });
       } else {
