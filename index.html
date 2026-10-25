@@ -17,30 +17,112 @@
       color: white;
       padding: 30px 15px;
     }
-    main { padding: 24px; }
+    main { padding: 24px 15px; }
     .card {
+      display: block;
+      box-sizing: border-box;
+      width: 100%;
+      max-width: 400px;
       background: white;
+      border: 0;
       margin: 12px auto;
       padding: 20px;
-      max-width: 400px;
       border-radius: 12px;
       box-shadow: 0 2px 8px #ddd;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .panel {
+      display: none;
+      max-width: 400px;
+      margin: 20px auto;
+    }
+    .action {
+      padding: 15px;
+      margin: 8px;
+      border: 0;
+      border-radius: 8px;
+      background: #102b50;
+      color: white;
+      font-size: 16px;
     }
   </style>
- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <header>
     <h1>HRS SRL</h1>
     <p>Business Management App</p>
   </header>
+
   <main>
-    <h2>Dashboard</h2>
-    <div class="card">Employees</div>
-    <div class="card">Construction Sites</div>
-    <div class="card">GPS Attendance</div>
-    <div class="card">Documents & Payslips</div>
-    <div class="card">Customers & Invoices</div>
+    <section id="dashboard">
+      <h2>Dashboard</h2>
+      <button class="card" onclick="openPage('employees')">
+        Employees
+      </button>
+      <button class="card" onclick="openPage('sites')">
+        Construction Sites
+      </button>
+      <button class="card" onclick="openPage('attendance')">
+        GPS Attendance
+      </button>
+      <button class="card" onclick="openPage('documents')">
+        Documents &amp; Payslips
+      </button>
+      <button class="card" onclick="openPage('customers')">
+        Customers &amp; Invoices
+      </button>
+    </section>
+
+    <section id="page" class="panel">
+      <h2 id="pageTitle"></h2>
+      <div id="pageContent"></div>
+      <button class="action" onclick="goHome()">
+        ← Dashboard
+      </button>
+    </section>
   </main>
+
+  <script>
+    const pages = {
+      employees: "Employees",
+      sites: "Construction Sites",
+      attendance: "GPS Attendance",
+      documents: "Documents & Payslips",
+      customers: "Customers & Invoices"
+    };
+
+    function openPage(page) {
+      document.getElementById("dashboard").style.display = "none";
+      document.getElementById("page").style.display = "block";
+      document.getElementById("pageTitle").textContent = pages[page];
+
+      const content = document.getElementById("pageContent");
+      content.innerHTML = "";
+
+      if (page === "attendance") {
+        const info = document.createElement("p");
+        info.textContent = "Check-in / Check-out (Demo)";
+        content.appendChild(info);
+
+        ["Inizia lavoro", "Termina lavoro"].forEach(label => {
+          const button = document.createElement("button");
+          button.className = "action";
+          button.textContent = label;
+          button.onclick = () => alert(
+            "এটি ডেমো বাটন। GPS ও Database সংযোগ এখনো বাকি।"
+          );
+          content.appendChild(button);
+        });
+      } else {
+        content.textContent = "এই বিভাগের কাজ পরবর্তী ধাপে যুক্ত করা হবে।";
+      }
+    }
+
+    function goHome() {
+      document.getElementById("page").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+    }
+  </script>
 </body>
 </html>
