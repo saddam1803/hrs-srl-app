@@ -6,6 +6,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HRS SRL App</title>
  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = "YOUR_SUPABASE_URL";
+  const SUPABASE_KEY = "YOUR_PUBLISHABLE_KEY";
+
+  const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+</script>
   <style>
     body {
       font-family: Arial, sans-serif;
