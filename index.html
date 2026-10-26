@@ -145,7 +145,30 @@
       content.innerHTML = "";
 if (page === "employees") {
   const info = document.createElement("p");
-  info.textContent = "কর্মচারীদের তালিকা";
+info.textContent = "কর্মচারীদের তালিকা লোড হচ্ছে...";
+
+supabaseClient
+  .from("employees")
+  .select("*")
+  .then(({ data, error }) => {
+    if (error) {
+      info.textContent = "তালিকা লোড করা যায়নি: " + error.message;
+      return;
+    }
+
+    info.textContent = "";
+
+    if (!data || data.length === 0) {
+      info.textContent = "এখনো কোনো কর্মচারী নেই।";
+      return;
+    }
+
+    data.forEach(employee => {
+      const row = document.createElement("p");
+      row.textContent = employee.full_name || employee.name || "কর্মচারী";
+      content.appendChild(row);
+    });
+  });
   content.appendChild(info);
 }
       if (page === "attendance") {
