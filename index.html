@@ -143,7 +143,11 @@
 
       const content = document.getElementById("pageContent");
       content.innerHTML = "";
-
+if (page === "employees") {
+  const info = document.createElement("p");
+  info.textContent = "কর্মচারীদের তালিকা";
+  content.appendChild(info);
+}
       if (page === "attendance") {
         const info = document.createElement("p");
         info.textContent = "Check-in / Check-out (Demo)";
