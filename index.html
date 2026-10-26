@@ -99,7 +99,7 @@
   </header>
 
   <main>
-    <section id="dashboard">
+    <section id="dashboard" style="display:none;">
       <h2>Dashboard</h2>
       <button class="card" onclick="openPage('employees')">
         Employees
@@ -207,8 +207,8 @@
     message.textContent = "লগইন ব্যর্থ: " + error.message;
     return;
   }
-
   if (data.user) {
+    document.getElementById("dashboard").style.display = "block";
     message.textContent = "লগইন সফল!";
     document.getElementById("loginBox").style.display = "none";
   }
