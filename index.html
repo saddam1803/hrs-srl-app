@@ -151,6 +151,7 @@ addButton.textContent = "+ Add Employee";
 addButton.className = "action";
 addButton.onclick = () => alert("কর্মচারী যোগ করার ফর্ম পরবর্তী ধাপে তৈরি হবে");
 content.appendChild(addButton);
+ console.log("Add Employee button created"); 
   supabaseClient
   .from("employees")
   .select("*")
