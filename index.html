@@ -70,6 +70,29 @@
   </style>
 </head>
 <body>
+  <section id="loginBox" class="panel" style="display:block;">
+  <h2>HRS SRL Login</h2>
+
+  <input
+    type="email"
+    id="loginEmail"
+    placeholder="Email"
+    autocomplete="username"
+  >
+
+  <input
+    type="password"
+    id="loginPassword"
+    placeholder="Password"
+    autocomplete="current-password"
+  >
+
+  <button class="action" onclick="loginUser()">
+    Accedi / Login
+  </button>
+
+  <p id="loginMessage"></p>
+</section>
   <header>
     <h1>HRS SRL</h1>
     <p>Business Management App</p>
@@ -161,6 +184,35 @@
       document.getElementById("page").style.display = "none";
       document.getElementById("dashboard").style.display = "block";
     }
+
+    async function loginUser() {
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  const message = document.getElementById("loginMessage");
+
+  if (!email || !password) {
+    message.textContent = "ইমেইল ও পাসওয়ার্ড লিখুন।";
+    return;
+  }
+
+  message.textContent = "লগইন হচ্ছে...";
+
+  const { data, error } =
+    await supabaseClient.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
+
+  if (error) {
+    message.textContent = "লগইন ব্যর্থ: " + error.message;
+    return;
+  }
+
+  if (data.user) {
+    message.textContent = "লগইন সফল!";
+    document.getElementById("loginBox").style.display = "none";
+  }
+}
   </script>
 </body>
 </html>
