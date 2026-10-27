@@ -149,7 +149,11 @@ info.textContent = "কর্মচারীদের তালিকা লো�
 const addButton = document.createElement("button");
 addButton.textContent = "+ Add Employee";
 addButton.className = "action";
-addButton.onclick = () => alert("কর্মচারী যোগ করার ফর্ম পরবর্তী ধাপে তৈরি হবে");
+addButton.onclick = () => {
+  const name = prompt("কর্মচারীর পুরো নাম লিখুন:");
+  if (!name || !name.trim()) return;
+  alert("কর্মচারীর নাম: " + name.trim());
+};
 content.appendChild(addButton);
  console.log("Add Employee button created"); 
   supabaseClient
