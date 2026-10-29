@@ -255,9 +255,15 @@ content.appendChild(addButton);
 };
           content.appendChild(button);
         });
-      } else {
-        content.textContent = "এই বিভাগের কাজ পরবর্তী ধাপে যুক্ত করা হবে।";
-      }
+      
+else if (
+  page !== "salary" &&
+  page !== "workhours" &&
+  page !== "owner"
+) {
+  content.textContent = "এই বিভাগের কাজ পরবর্তী ধাপে যুক্ত করা হবে।";
+}
+
     }
 
     function goHome() {
