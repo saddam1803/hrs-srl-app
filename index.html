@@ -174,7 +174,7 @@ if (page === "salary") {
 
   const { data, error } = await supabaseClient
     .from("employee_salaries")
-    .select("employee_id,salary_type,hourly_rate,monthly_salary,currency");
+    .select("employee_id,salary_type,hourly_rate,monthly_salary,currency,employees(full_name)");
 
   if (error) {
     info.textContent = "বেতন লোড করা যায়নি: " + error.message;
