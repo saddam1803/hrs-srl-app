@@ -128,6 +128,21 @@
   Company Owner
 </button>
   </section>
+    <section id="employeeDashboard" style="display:none;">
+  <h2>Employee Dashboard</h2>
+
+  <button class="card" onclick="openPage('attendance')">
+    GPS Check-in / Check-out
+  </button>
+
+  <button class="card" onclick="openPage('documents')">
+    My Documents & Payslips
+  </button>
+
+  <button class="card" onclick="openPage('sites')">
+    My Construction Site
+  </button>
+</section>
     <section id="page" class="panel">
       <h2 id="pageTitle"></h2>
       <div id="pageContent"></div>
@@ -400,10 +415,31 @@ else if (
     return;
   }
   if (data.user) {
-    document.getElementById("dashboard").style.display = "block";
-    message.textContent = "লগইন সফল!";
-    document.getElementById("loginBox").style.display = "none";
+  const { data: employee, error: roleError } =
+    await supabaseClient
+      .from("employees")
+      .select("role, active")
+      .eq("id", data.user.id)
+      .single();
+
+  if (roleError || !employee || employee.active !== true) {
+    message.textContent = "অ্যাকাউন্ট অনুমোদিত নয়";
+    await supabaseClient.auth.signOut();
+    return;
   }
+
+  document.getElementById("dashboard").style.display = "none";
+  document.getElementById("employeeDashboard").style.display = "none";
+
+  if (employee.role === "admin") {
+    document.getElementById("dashboard").style.display = "block";
+  } else {
+    document.getElementById("employeeDashboard").style.display = "block";
+  }
+
+  document.getElementById("loginBox").style.display = "none";
+  message.textContent = "লগইন সফল!";
+}
 }
   </script>
 </body>
