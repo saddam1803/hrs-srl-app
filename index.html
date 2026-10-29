@@ -185,7 +185,6 @@ if (page === "salary") {
 
   if (!data || data.length === 0) {
     info.textContent = "এখনো কোনো বেতন নির্ধারণ করা হয়নি।";
-    return;
   }
 
   data.forEach(salary => {
@@ -196,7 +195,62 @@ if (page === "salary") {
         : `Monthly: €${salary.monthly_salary}/month`;
     content.appendChild(row);
   });
-}
+const salaryButton = document.createElement("button");
+salaryButton.textContent = "+ Add / Update Salary";
+salaryButton.className = "action";
+
+salaryButton.onclick = async () => {
+  const employeeEmail = prompt("কর্মচারীর ইমেইল লিখুন:");
+  if (!employeeEmail?.trim()) return;
+
+  const type = prompt("বেতনের ধরন লিখুন: hourly অথবা monthly");
+  if (!["hourly", "monthly"].includes(type)) {
+    alert("hourly অথবা monthly লিখুন");
+    return;
+  }
+
+  const amount = Number(prompt(
+    type === "hourly"
+      ? "ঘণ্টাপ্রতি বেতন (€) লিখুন:"
+      : "মাসিক বেতন (€) লিখুন:"
+  ));
+
+  if (!Number.isFinite(amount) || amount < 0) {
+    alert("সঠিক বেতনের পরিমাণ লিখুন");
+    return;
+  }
+
+  const { data: employees, error: employeeError } =
+    await supabaseClient
+      .from("employees")
+      .select("id")
+      .eq("email", employeeEmail.trim())
+      .limit(1);
+
+  if (employeeError || !employees?.length) {
+    alert("কর্মচারী পাওয়া যায়নি");
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("employee_salaries")
+    .upsert({
+      employee_id: employees[0].id,
+      salary_type: type,
+      hourly_rate: type === "hourly" ? amount : 0,
+      monthly_salary: type === "monthly" ? amount : 0,
+      currency: "EUR"
+    }, { onConflict: "employee_id" });
+
+  if (error) {
+    alert("বেতন সংরক্ষণ করা যায়নি: " + error.message);
+  } else {
+    alert("বেতন সফলভাবে সংরক্ষিত হয়েছে!");
+    openPage("salary");
+  }
+};
+
+content.appendChild(salaryButton);}
 
 if (page === "workhours") {
   content.textContent = "Working Hours: Submit and Approve Hours";
