@@ -361,9 +361,28 @@ content.appendChild(addButton);
   }
 
   navigator.geolocation.getCurrentPosition(
-    () => {
-      alert("GPS কাজ করছে! লোকেশন পাওয়া গেছে।");
-    },
+    async (position) => {
+  const { data: { user }, error: authError } =
+    await supabaseClient.auth.getUser();
+
+  if (authError || !user) {
+    alert("আগে লগইন করুন");
+    return;
+  }
+
+  const { data: assignments, error: siteError } =
+    await supabaseClient
+      .from("employee_sites")
+      .select("site_id, sites(latitude, longitude, geofence_radius_m, active)")
+      .eq("employee_id", user.id);
+
+  if (siteError || !assignments?.length) {
+    alert("আপনার জন্য কোনো কাজের সাইট পাওয়া যায়নি");
+    return;
+  }
+
+  alert("GPS পাওয়া গেছে। পরবর্তী ধাপে সাইট যাচাই করব।");
+},
     (error) => {
       alert("GPS লোকেশন পাওয়া যায়নি। Error: " + error.message);
     },
