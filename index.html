@@ -149,11 +149,30 @@ info.textContent = "কর্মচারীদের তালিকা লো�
 const addButton = document.createElement("button");
 addButton.textContent = "+ Add Employee";
 addButton.className = "action";
-addButton.onclick = () => {
+
+addButton.onclick = async () => {
   const name = prompt("কর্মচারীর পুরো নাম লিখুন:");
   if (!name || !name.trim()) return;
-  alert("কর্মচারীর নাম: " + name.trim());
+
+  const email = prompt("কর্মচারীর ইমেইল লিখুন:");
+  if (!email || !email.trim()) return;
+
+  const { error } = await supabaseClient
+    .from("employees")
+    .insert({
+      full_name: name.trim(),
+      email: email.trim(),
+      role: "employee",
+      active: true
+    });
+  if (error) {
+    alert("কর্মচারী যোগ করা যায়নি: " + error.message);
+  } else {
+    alert("কর্মচারী সফলভাবে যোগ হয়েছে!");
+    openPage("employees");
+  }
 };
+
 content.appendChild(addButton);
  console.log("Add Employee button created"); 
   supabaseClient
