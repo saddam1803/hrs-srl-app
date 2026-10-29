@@ -188,13 +188,20 @@ if (page === "salary") {
   }
 
   data.forEach(salary => {
-    const row = document.createElement("p");
-    row.textContent =
-      salary.salary_type === "hourly"
-        ? `Hourly: €${salary.hourly_rate}/hour`
-        : `Monthly: €${salary.monthly_salary}/month`;
-    content.appendChild(row);
-  });
+  const row = document.createElement("p");
+
+  const employeeName =
+    salary.employees?.full_name || "Unknown Employee";
+
+  const salaryText =
+    salary.salary_type === "hourly"
+      ? `Hourly: €${salary.hourly_rate}/hour`
+      : `Monthly: €${salary.monthly_salary}/month`;
+
+  row.textContent = `${employeeName} — ${salaryText}`;
+
+  content.appendChild(row);
+});
 const salaryButton = document.createElement("button");
 salaryButton.textContent = "+ Add / Update Salary";
 salaryButton.className = "action";
