@@ -116,8 +116,18 @@
       <button class="card" onclick="openPage('customers')">
         Customers &amp; Invoices
       </button>
-    </section>
+  <button class="card" onclick="openPage('salary')">
+  Employee Salary
+</button>
 
+<button class="card" onclick="openPage('workhours')">
+  Working Hours
+</button>
+
+<button class="card" onclick="openPage('owner')">
+  Company Owner
+</button>
+  </section>
     <section id="page" class="panel">
       <h2 id="pageTitle"></h2>
       <div id="pageContent"></div>
@@ -129,21 +139,36 @@
 
   <script>
     const pages = {
-      employees: "Employees",
-      sites: "Construction Sites",
-      attendance: "GPS Attendance",
-      documents: "Documents & Payslips",
-      customers: "Customers & Invoices"
-    };
-
-    function openPage(page) {
+  employees: "Employees",
+  sites: "Construction Sites",
+  attendance: "GPS Attendance",
+  documents: "Documents & Payslips",
+  customers: "Customers & Invoices",
+  salary: "Employee Salary",
+  workhours: "Working Hours",
+  owner: "Company Owner"
+};
+function openPage(page) {
       document.getElementById("dashboard").style.display = "none";
       document.getElementById("page").style.display = "block";
       document.getElementById("pageTitle").textContent = pages[page];
 
       const content = document.getElementById("pageContent");
       content.innerHTML = "";
-if (page === "employees") {
+
+if (page === "salary") {
+  content.textContent = "Employee Salary: Hourly and Monthly Salary";
+}
+
+if (page === "workhours") {
+  content.textContent = "Working Hours: Submit and Approve Hours";
+}
+
+if (page === "owner") {
+  content.textContent = "Company Owner: Profile and Photo";
+}
+
+  if (page === "employees") {
   const info = document.createElement("p");
 info.textContent = "কর্মচারীদের তালিকা লোড হচ্ছে...";
 const addButton = document.createElement("button");
