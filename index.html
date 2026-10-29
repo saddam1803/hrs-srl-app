@@ -202,7 +202,13 @@ if (page === "salary") {
 
   content.appendChild(row);
 });
-const salaryButton = document.createElement("button");
+const { data: adminAllowed, error: adminError } =
+  await supabaseClient.rpc("is_admin");
+
+if (adminError || adminAllowed !== true) {
+  return;
+}
+  const salaryButton = document.createElement("button");
 salaryButton.textContent = "+ Add / Update Salary";
 salaryButton.className = "action";
 
