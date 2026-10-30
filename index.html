@@ -416,7 +416,13 @@ if (!validSite) {
   alert("আপনি কাজের সাইটের অনুমোদিত এলাকার বাইরে আছেন।");
   return;
 }
-
+if (
+  position.coords.accuracy == null ||
+  position.coords.accuracy > 100
+) {
+  alert("GPS যথেষ্ট নির্ভুল নয়। খোলা জায়গায় আবার চেষ্টা করুন।");
+  return;
+}
 alert("GPS যাচাই সফল! আপনি অনুমোদিত সাইটের মধ্যে আছেন।");
 },
     (error) => {
