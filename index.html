@@ -381,7 +381,43 @@ content.appendChild(addButton);
     return;
   }
 
-  alert("GPS পাওয়া গেছে। পরবর্তী ধাপে সাইট যাচাই করব।");
+const toRad = n => n * Math.PI / 180;
+
+const userLat = position.coords.latitude;
+const userLon = position.coords.longitude;
+
+const validSite = assignments.find(({ sites }) => {
+  if (!sites || sites.active !== true) return false;
+
+  const lat = sites.latitude;
+  const lon = sites.longitude;
+  const radius = sites.geofence_radius_m;
+
+  if (lat == null || lon == null || radius == null) {
+    return false;
+  }
+
+  const dLat = toRad(lat - userLat);
+  const dLon = toRad(lon - userLon);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(userLat)) *
+    Math.cos(toRad(lat)) *
+    Math.sin(dLon / 2) ** 2;
+
+  const distance = 2 * 6371000 *
+    Math.asin(Math.min(1, Math.sqrt(a)));
+
+  return distance <= radius;
+});
+
+if (!validSite) {
+  alert("আপনি কাজের সাইটের অনুমোদিত এলাকার বাইরে আছেন।");
+  return;
+}
+
+alert("GPS যাচাই সফল! আপনি অনুমোদিত সাইটের মধ্যে আছেন।");
 },
     (error) => {
       alert("GPS লোকেশন পাওয়া যায়নি। Error: " + error.message);
