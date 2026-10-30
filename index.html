@@ -426,6 +426,31 @@ if (
 const eventType =
   label === "Inizia lavoro" ? "check_in" : "check_out";
 
+const { data: lastEvents, error: historyError } =
+  await supabaseClient
+    .from("attendance")
+    .select("event_type")
+    .eq("employee_id", user.id)
+    .order("event_time", { ascending: false })
+    .limit(1);
+
+if (historyError) {
+  alert("আগের Attendance যাচাই করা যায়নি: " + historyError.message);
+  return;
+}
+
+const lastEvent = lastEvents?.[0]?.event_type;
+
+if (eventType === "check_in" && lastEvent === "check_in") {
+  alert("আপনি ইতিমধ্যে Check-in করেছেন। আগে Check-out করুন।");
+  return;
+}
+
+if (eventType === "check_out" && lastEvent !== "check_in") {
+  alert("আগে Check-in করতে হবে।");
+  return;
+}
+
 const { error: saveError } = await supabaseClient
   .from("attendance")
   .insert({
