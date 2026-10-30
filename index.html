@@ -423,7 +423,30 @@ if (
   alert("GPS যথেষ্ট নির্ভুল নয়। খোলা জায়গায় আবার চেষ্টা করুন।");
   return;
 }
-alert("GPS যাচাই সফল! আপনি অনুমোদিত সাইটের মধ্যে আছেন।");
+const eventType =
+  label === "Inizia lavoro" ? "check_in" : "check_out";
+
+const { error: saveError } = await supabaseClient
+  .from("attendance")
+  .insert({
+    employee_id: user.id,
+    site_id: validSite.site_id,
+    event_type: eventType,
+    latitude: userLat,
+    longitude: userLon,
+    verification_status: "verified"
+  });
+
+if (saveError) {
+  alert("Attendance সংরক্ষণ হয়নি: " + saveError.message);
+  return;
+}
+
+alert(
+  eventType === "check_in"
+    ? "Check-in সফলভাবে সংরক্ষিত হয়েছে!"
+    : "Check-out সফলভাবে সংরক্ষিত হয়েছে!"
+);
 },
     (error) => {
       alert("GPS লোকেশন পাওয়া যায়নি। Error: " + error.message);
