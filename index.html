@@ -494,7 +494,40 @@ alert(
           content.appendChild(button);
         });
     }
-else if (
+
+else if (page === "notifications") {
+  const info = document.createElement("p");
+  info.textContent = "নোটিফিকেশন লোড হচ্ছে...";
+  content.appendChild(info);
+
+  const { data, error } = await supabaseClient
+    .from("admin_notifications")
+    .select("event_type,message,created_at,is_read")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) {
+    info.textContent = "নোটিফিকেশন দেখা যাচ্ছে না: " + error.message;
+    return;
+  }
+
+  content.innerHTML = "";
+
+  if (!data || data.length === 0) {
+    content.textContent = "এখনো কোনো নোটিফিকেশন নেই";
+  } else {
+    data.forEach(item => {
+      const row = document.createElement("p");
+      row.textContent =
+        (item.event_type === "check_in" ? "🟢 Check-in: " : "🔴 Check-out: ") +
+        item.message + " — " +
+        new Date(item.created_at).toLocaleString("it-IT");
+      content.appendChild(row);
+    });
+  }
+}
+
+    else if (
   page !== "salary" &&
   page !== "workhours" &&
   page !== "owner"
