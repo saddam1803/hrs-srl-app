@@ -625,6 +625,33 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const firebaseMessaging = firebase.messaging();
 
+async function getAdminNotificationToken() {
+  try {
+    const registration = await navigator.serviceWorker.register(
+      "./firebase-messaging-sw.js"
+    );
+
+    const permission = await Notification.requestPermission();
+
+    if (permission !== "granted") {
+      alert("Notification permission দেওয়া হয়নি");
+      return;
+    }
+
+    const token = await firebaseMessaging.getToken({
+      vapidKey: "BHgfg2vkw2O8YzmTV0yaY9Esvujygp3pD8V-jtaZyBMQtMsg72e6AAjrQBA18hJ7gWyyR9BYSRwaqqK6ik23ZTY,
+      serviceWorkerRegistration: registration
+    });
+
+    if (token) {
+      console.log("FCM token received");
+      alert("Notification token তৈরি হয়েছে");
+    }
+  } catch (error) {
+    alert("Notification setup error: " + error.message);
+  }
+}
+
   </script>
 </body>
 </html>
