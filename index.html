@@ -592,6 +592,22 @@ page !== "notifications"
   message.textContent = "লগইন সফল!";
 }
 }
+    
+async function enableAdminNotifications() {
+  if (!("Notification" in window)) {
+    alert("এই ব্রাউজারে নোটিফিকেশন সমর্থিত নয়");
+    return;
+  }
+
+  const permission = await Notification.requestPermission();
+
+  if (permission === "granted") {
+    alert("নোটিফিকেশন অনুমতি দেওয়া হয়েছে");
+  } else {
+    alert("নোটিফিকেশন অনুমতি দেওয়া হয়নি");
+  }
+}
+  
   </script>
 </body>
 </html>
