@@ -6,6 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HRS SRL App</title>
  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+
 <script>
   const SUPABASE_URL = "https://rklplljrumpbzkqstxpt.supabase.co";
   const SUPABASE_KEY = "sb_publishable_0o6BxyVK9jC7tS9toBd_IQ_ugvzhG1w";
@@ -608,6 +612,19 @@ async function enableAdminNotifications() {
   }
 }
   
+const firebaseConfig = {
+  apiKey: "AIzaSyC3CQH-6CPFEzHzvaq4_lbGpUOE2prSotM",
+  authDomain: "hrs-srl-notifications.firebaseapp.com",
+  projectId: "hrs-srl-notifications",
+  storageBucket: "hrs-srl-notifications.firebasestorage.app",
+  messagingSenderId: "981178929755",
+  appId: "1:981178929755:web:c00ee29cad57d3c0bf657e",
+  measurementId: "G-7N8JGQC6X3"
+};
+
+firebase.initializeApp(firebaseConfig);
+const firebaseMessaging = firebase.messaging();
+
   </script>
 </body>
 </html>
