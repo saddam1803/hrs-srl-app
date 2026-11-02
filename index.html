@@ -484,20 +484,20 @@ alert(
     ? "Check-in সফলভাবে সংরক্ষিত হয়েছে!"
     : "Check-out সফলভাবে সংরক্ষিত হয়েছে!"
 );
-},
-    (error) => {
-      alert("GPS লোকেশন পাওয়া যায়নি। Error: " + error.message);
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 60000,
-      maximumAge: 0
-    }
-  );
-};
-          content.appendChild(button);
-        });
-    }
+      
+  },
+  (error) => {
+    alert("GPS লোকেশন পাওয়া যায়নি: " + error.message);
+  },
+  {
+    enableHighAccuracy: true,
+    timeout: 60000,
+    maximumAge: 0
+  }
+);
+content.appendChild(button);
+});
+}
 
 else if (page === "notifications") {
   const info = document.createElement("p");
