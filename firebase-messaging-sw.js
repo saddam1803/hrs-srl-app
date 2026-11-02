@@ -11,12 +11,12 @@ firebase.initializeApp({
   appId: "1:981178929755:web:c00ee29cad57d3c0bf657e",
   measurementId: "G-7N8JGQC6X3"
 });
-const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage((payload) => {
-  const title = payload.notification?.title || "HRS SRL";
+// const messaging = firebase.messaging(); 
+// messaging.onBackgroundMessage((payload) => {
+  //  const title = payload.notification?.title || "HRS SRL";
 
-  self.registration.showNotification(title, {
-    body: payload.notification?.body || "নতুন নোটিফিকেশন এসেছে"
-  });
-});
+   // self.registration.showNotification(title, {
+    //  body: payload.notification?.body || "নতুন নোটিফিকেশন এসেছে"
+  //  }); 
+// });
