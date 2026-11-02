@@ -651,6 +651,25 @@ async function getAdminNotificationToken() {
 
     if (token) {
       console.log("FCM token received");
+      
+const { data: { user }, error: authError } =
+  await supabaseClient.auth.getUser();
+
+if (authError || !user) {
+  throw new Error("Admin login required");
+}
+
+const { error: saveError } = await supabaseClient
+  .from("admin_push_tokens")
+  .upsert(
+    { admin_id: user.id, fcm_token: token },
+    { onConflict: "admin_id" }
+  );
+
+if (saveError) {
+  throw saveError;
+}
+
       alert("Notification token তৈরি হয়েছে");
     }
   } catch (error) {
