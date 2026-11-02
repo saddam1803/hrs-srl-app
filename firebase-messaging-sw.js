@@ -11,7 +11,9 @@ firebase.initializeApp({
   appId: "1:981178929755:web:c00ee29cad57d3c0bf657e",
   measurementId: "G-7N8JGQC6X3"
 });
-
+if (!firebase.messaging.isSupported()) {
+  throw new Error("Firebase Messaging is not supported in this browser");
+}
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
