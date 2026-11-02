@@ -19,3 +19,30 @@
     //  body: payload.notification?.body || "নতুন নোটিফিকেশন এসেছে"
   //  }); 
 // });
+
+self.addEventListener("push", function(event) {
+  let data = {};
+
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (error) {
+    data = {
+      notification: {
+        title: "HRS SRL",
+        body: event.data ? event.data.text() : "নতুন নোটিফিকেশন"
+      }
+    };
+  }
+
+  const notification = data.notification || {};
+
+  event.waitUntil(
+    self.registration.showNotification(
+      notification.title || "HRS SRL",
+      {
+        body: notification.body || "নতুন নোটিফিকেশন এসেছে",
+        icon: "./icon.png"
+      }
+    )
+  );
+});
