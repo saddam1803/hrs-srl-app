@@ -593,7 +593,8 @@ else if (page === "documents") {
         }
         alert("PDF uploaded successfully.");
       };
-      picker.click();
+      document.body.appendChild(picker);
+picker.style.display = "block";
     };
   }
 
