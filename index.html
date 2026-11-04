@@ -535,7 +535,102 @@ else if (page === "notifications") {
     });
   }
 }
+else if (page === "documents") {
+  const heading = document.createElement("h3");
+  heading.textContent = "Employee Documents";
+  content.appendChild(heading);
 
+  const { data: auth } = await supabaseClient.auth.getUser();
+  if (!auth?.user) {
+    content.append("Please log in first.");
+    return;
+  }
+
+  const user = auth.user;
+  const { data: admin } = await supabaseClient.rpc("is_admin");
+
+  if (admin === true) {
+    const uploadButton = document.createElement("button");
+    uploadButton.textContent = "Upload Employee PDF";
+    uploadButton.className = "action";
+    content.appendChild(uploadButton);
+
+    uploadButton.onclick = async () => {
+      const email = prompt("Employee email:");
+      if (!email?.trim()) return;
+
+      const { data: employees, error: employeeError } =
+        await supabaseClient.from("employees")
+          .select("id").eq("email", email.trim()).limit(1);
+
+      if (employeeError || !employees?.length) {
+        alert("Employee not found or access denied.");
+        return;
+      }
+
+      const picker = document.createElement("input");
+      picker.type = "file";
+      picker.accept = ".pdf,application/pdf";
+      picker.onchange = async () => {
+        const file = picker.files?.[0];
+        if (!file) return;
+        if (file.type !== "application/pdf" ||
+            file.size > 10 * 1024 * 1024) {
+          alert("Only PDF files up to 10 MB are allowed.");
+          return;
+        }
+
+        const path = employees[0].id + "/" +
+          crypto.randomUUID() + ".pdf";
+
+        const { error } = await supabaseClient.storage
+          .from("employee-documents")
+          .upload(path, file, { contentType: "application/pdf" });
+
+        if (error) {
+          alert("Upload failed: " + error.message);
+          return;
+        }
+        alert("PDF uploaded successfully.");
+      };
+      picker.click();
+    };
+  }
+
+  const { data: files, error: listError } =
+    await supabaseClient.storage.from("employee-documents")
+      .list(user.id);
+
+  if (listError) {
+    content.append("Documents could not be loaded: " + listError.message);
+    return;
+  }
+
+  const list = document.createElement("div");
+  content.appendChild(list);
+
+  if (!files?.length) list.textContent = "No documents found.";
+
+  for (const file of files || []) {
+    if (!file.name.toLowerCase().endsWith(".pdf")) continue;
+    const button = document.createElement("button");
+    button.textContent = "Download: " + file.name;
+    button.className = "action";
+    list.appendChild(button);
+
+    button.onclick = async () => {
+      const { data, error } = await supabaseClient.storage
+        .from("employee-documents")
+        .createSignedUrl(user.id + "/" + file.name, 60);
+
+      if (error || !data?.signedUrl) {
+        alert("Download failed.");
+        return;
+      }
+      window.open(data.signedUrl, "_blank", "noopener");
+    };
+  }
+}
     else if (
   page !== "salary" &&
   page !== "workhours" &&
