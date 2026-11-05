@@ -599,7 +599,28 @@ if (sessionError) {
           alert("Upload failed: " + error.message);
           return;
         }
-        alert("PDF uploaded successfully.");
+        
+const documentType = prompt(
+  "Tipo documento: Contratto, UNILAV, Corso, Medico, Busta paga",
+  "Contratto"
+);
+
+const { error: dbError } = await supabaseClient
+  .from("employee_documents")
+  .insert({
+    employee_id: employees[0].id,
+    document_type: documentType?.trim() || "Altro",
+    original_filename: file.name,
+    file_path: path
+  });
+
+if (dbError) {
+  alert("PDF uploaded, but document details could not be saved: " + dbError.message);
+  return;
+}
+
+alert("PDF and document details saved successfully.");
+
       };
       document.body.appendChild(picker);
 picker.style.display = "block";
