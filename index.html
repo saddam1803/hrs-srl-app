@@ -535,203 +535,336 @@ else if (page === "notifications") {
     });
   }
 }
+
 else if (page === "documents") {
   const heading = document.createElement("h3");
-  heading.textContent = "Employee Documents";
+  heading.textContent = "Documenti e Buste Paga";
   content.appendChild(heading);
 
-  const { data: auth } = await supabaseClient.auth.getUser();
-  if (!auth?.user) {
-    content.append("Please log in first.");
+  const { data: authData, error: authError } =
+    await supabaseClient.auth.getUser();
+
+  if (authError || !authData?.user) {
+    content.append("Effettua prima il login.");
     return;
   }
 
-  const user = auth.user;
-  const { data: admin } = await supabaseClient.rpc("is_admin");
+  const user = authData.user;
 
-  if (admin === true) {
+  const { data: adminAllowed, error: adminError } =
+    await supabaseClient.rpc("is_admin");
+
+  if (adminError) {
+    content.append(
+      "Errore autorizzazione: " + adminError.message
+    );
+    return;
+  }
+
+  const isAdmin = adminAllowed === true;
+  const bucket = "employee-documents";
+
+  const allowedTypes = [
+    "Busta Paga",
+    "Certificazione Unica (CU)",
+    "Contratto di Lavoro",
+    "UNILAV",
+    "Altro"
+  ];
+
+  const message = document.createElement("p");
+  content.appendChild(message);
+
+  const employeeSelect = document.createElement("select");
+  employeeSelect.style.margin = "12px";
+  employeeSelect.style.maxWidth = "95%";
+
+  let selectedEmployeeId = user.id;
+
+  if (isAdmin) {
+    employeeSelect.add(
+      new Option("Seleziona Dipendente", "")
+    );
+
+    const { data: employees, error: empError } =
+      await supabaseClient
+        .from("employees")
+        .select("id,full_name")
+        .order("full_name");
+
+    if (empError) {
+      message.textContent =
+        "Errore dipendenti: " + empError.message;
+      return;
+    }
+
+    for (const emp of employees || []) {
+      employeeSelect.add(
+        new Option(emp.full_name || emp.id, emp.id)
+      );
+    }
+
+    selectedEmployeeId = "";
+    content.appendChild(employeeSelect);
+  }
+
+  const list = document.createElement("div");
+  content.appendChild(list);
+
+  async function showDocuments(employeeId) {
+    list.replaceChildren();
+
+    if (!employeeId) {
+      list.textContent = "Seleziona un dipendente.";
+      return;
+    }
+
+    list.textContent = "Caricamento documenti...";
+
+    const { data: records, error: dbError } =
+      await supabaseClient
+        .from("employee_documents")
+        .select(
+          "employee_id,document_type,original_filename,file_path"
+        )
+        .eq("employee_id", employeeId);
+
+    if (dbError) {
+      list.textContent =
+        "Errore documenti: " + dbError.message;
+      return;
+    }
+
+    list.replaceChildren();
+
+    const privateTypes = [
+      "Attestati di Formazione",
+      "Certificati Medici",
+      "Corso",
+      "Medico"
+    ];
+
+    const visibleRecords = (records || []).filter(
+      record => isAdmin ||
+        !privateTypes.includes(record.document_type)
+    );
+
+    if (!visibleRecords.length) {
+      list.textContent = "Nessun documento trovato.";
+      return;
+    }
+
+    for (const record of visibleRecords) {
+      const item = document.createElement("div");
+      item.style.margin = "16px 0";
+      item.style.padding = "10px";
+      item.style.borderBottom = "1px solid #ddd";
+
+      const name = document.createElement("p");
+      name.textContent =
+        (record.document_type || "Documento") +
+        " — " +
+        (record.original_filename || "Documento PDF");
+
+      item.appendChild(name);
+
+      for (const action of [
+        "Visualizza PDF",
+        "Scarica PDF"
+      ]) {
+        const button = document.createElement("button");
+        button.className = "action";
+        button.textContent = action;
+
+        button.onclick = async () => {
+          button.disabled = true;
+
+          try {
+            const { data, error } =
+              await supabaseClient.storage
+                .from(bucket)
+                .createSignedUrl(
+                  record.file_path,
+                  60,
+                  {
+                    download:
+                      action === "Scarica PDF"
+                  }
+                );
+
+            if (error) throw error;
+
+            if (!data?.signedUrl) {
+              throw new Error("Link PDF non disponibile.");
+            }
+
+            window.open(
+              data.signedUrl,
+              "_blank",
+              "noopener"
+            );
+          } catch (error) {
+            alert(
+              "Errore apertura PDF: " +
+              (error.message || String(error))
+            );
+          } finally {
+            button.disabled = false;
+          }
+        };
+
+        item.appendChild(button);
+      }
+
+      list.appendChild(item);
+    }
+  }
+
+  if (isAdmin) {
+    const typeSelect = document.createElement("select");
+    typeSelect.style.margin = "8px";
+
+    for (const type of allowedTypes) {
+      typeSelect.add(new Option(type, type));
+    }
+
+    content.insertBefore(typeSelect, list);
+
+    const picker = document.createElement("input");
+    picker.type = "file";
+    picker.accept = ".pdf,application/pdf";
+    picker.style.display = "none";
+
+    content.insertBefore(picker, list);
+
     const uploadButton = document.createElement("button");
-    uploadButton.textContent = "Upload Employee PDF";
     uploadButton.className = "action";
-    content.appendChild(uploadButton);
+    uploadButton.textContent = "Carica PDF";
 
-    uploadButton.onclick = async () => {
-      const email = prompt("Employee email:");
-      if (!email?.trim()) return;
+    content.insertBefore(uploadButton, picker);
 
-      const { data: employees, error: employeeError } =
-        await supabaseClient.from("employees")
-          .select("id").eq("email", email.trim()).limit(1);
-
-      if (employeeError || !employees?.length) {
-        alert("Employee not found or access denied.");
+    uploadButton.onclick = () => {
+      if (!employeeSelect.value) {
+        alert("Seleziona prima un dipendente.");
         return;
       }
 
-      const picker = document.createElement("input");
-      picker.type = "file";
-      picker.accept = ".pdf,application/pdf";
-      picker.onchange = async () => {
-        const file = picker.files?.[0];
-        if (!file) return;
-        if (file.type !== "application/pdf" ||
-            file.size > 10 * 1024 * 1024) {
-          alert("Only PDF files up to 10 MB are allowed.");
-          return;
+      picker.value = "";
+      picker.click();
+    };
+
+    picker.onchange = async () => {
+      const file = picker.files?.[0];
+      if (!file) return;
+
+      const employeeId = employeeSelect.value;
+
+      if (!employeeId) {
+        alert("Seleziona un dipendente.");
+        return;
+      }
+
+      const isPdf =
+        file.type === "application/pdf" ||
+        file.name.toLowerCase().endsWith(".pdf");
+
+      if (!isPdf) {
+        alert("Seleziona soltanto file PDF.");
+        return;
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        alert("Dimensione massima: 10 MB.");
+        return;
+      }
+
+      uploadButton.disabled = true;
+      uploadButton.textContent = "Caricamento...";
+      message.textContent = "";
+
+      try {
+        const { data: sessionData, error: sessionError } =
+          await supabaseClient.auth.getSession();
+
+        if (sessionError) throw sessionError;
+
+        if (!sessionData?.session) {
+          throw new Error(
+            "Sessione scaduta. Effettua nuovamente il login."
+          );
         }
 
-        const path = employees[0].id + "/" +
+        const path =
+          employeeId + "/" +
           crypto.randomUUID() + ".pdf";
 
-const { data: sessionData, error: sessionError } =
-  await supabaseClient.auth.getSession();
+        const { data: uploaded, error: uploadError } =
+          await supabaseClient.storage
+            .from(bucket)
+            .upload(path, file, {
+              contentType: "application/pdf",
+              upsert: false
+            });
 
-if (!sessionData?.session) {
-  alert("Session expired. Please log in again.");
-  return;
-}
+        if (uploadError) throw uploadError;
 
-if (sessionError) {
-  alert("Login session expired. Please log in again.");
-  return;
-}
+        const { error: dbError } =
+          await supabaseClient
+            .from("employee_documents")
+            .insert({
+              employee_id: employeeId,
+              document_type: typeSelect.value,
+              original_filename: file.name,
+              file_path: uploaded?.path || path
+            });
 
-        const { error } = await supabaseClient.storage
-          .from("employee-documents")
-          .upload(path, file, { contentType: "application/pdf" });
-
-        if (error) {
-          alert("Upload failed: " + error.message);
-          return;
+        if (dbError) {
+          throw new Error(
+            "PDF caricato nello Storage, ma dati non salvati: " +
+            dbError.message
+          );
         }
-        
-const documentType = prompt(
-  "Tipo documento: Contratto, UNILAV, Corso, Medico, Busta paga",
-  "Contratto"
-);
 
-const { error: dbError } = await supabaseClient
-  .from("employee_documents")
-  .insert({
-    employee_id: employees[0].id,
-    document_type: documentType?.trim() || "Altro",
-    original_filename: file.name,
-    file_path: path
-  });
+        message.textContent =
+          "PDF caricato correttamente.";
 
-if (dbError) {
-  alert("PDF uploaded, but document details could not be saved: " + dbError.message);
-  return;
-}
+        await showDocuments(employeeId);
 
-alert("PDF and document details saved successfully.");
+      } catch (error) {
+        const details =
+          error?.message || String(error);
 
-      };
-      document.querySelectorAll('input[type="file"]').forEach(input => {
-  if (input !== picker) input.remove();
-});
+        console.error("HRS PDF upload error:", error);
 
-document.body.appendChild(picker);
-picker.style.display = "block";
+        if (
+          details.toLowerCase().includes("failed to fetch")
+        ) {
+          alert(
+            "Connessione a Supabase Storage non riuscita. " +
+            "Controllare rete, browser o configurazione Storage. " +
+            "Dettaglio: " + details
+          );
+        } else {
+          alert("Errore caricamento PDF: " + details);
+        }
+      } finally {
+        uploadButton.disabled = false;
+        uploadButton.textContent = "Carica PDF";
+      }
     };
-  }
 
-  
-const list = document.createElement("div");
-content.appendChild(list);
+    employeeSelect.onchange = () => {
+      selectedEmployeeId = employeeSelect.value;
+      showDocuments(selectedEmployeeId);
+    };
 
-const isAdmin = await supabaseClient.rpc("is_admin")
-  .then(({ data }) => data === true)
-  .catch(() => false);
+    list.textContent = "Seleziona un dipendente.";
 
-let selectedEmployeeId = user.id;
-
-async function showDocuments(employeeId) {
-  list.replaceChildren();
-
-  const { data: files, error } = await supabaseClient.storage
-    .from("employee-documents")
-    .list(employeeId);
-
-  if (error) {
-    list.textContent = "Errore: " + error.message;
-    return;
-  }
-
-  const pdfs = (files || []).filter(f =>
-    f.name.toLowerCase().endsWith(".pdf")
-  );
-
-  if (!pdfs.length) {
-    list.textContent = "Nessun documento trovato.";
-    return;
-  }
-
-  for (const file of pdfs) {
-    const path = employeeId + "/" + file.name;
-    const item = document.createElement("div");
-    item.style.margin = "12px 0";
-    item.textContent = file.name + " ";
-
-    for (const action of ["Visualizza PDF", "Scarica PDF"]) {
-      const btn = document.createElement("button");
-      btn.className = "action";
-      btn.textContent = action;
-
-      btn.onclick = async () => {
-        const { data, error } = await supabaseClient.storage
-          .from("employee-documents")
-          .createSignedUrl(path, 60, {
-            download: action === "Scarica PDF"
-          });
-
-        if (error || !data?.signedUrl) {
-          alert("Impossibile aprire il PDF.");
-          return;
-        }
-
-        window.open(data.signedUrl, "_blank", "noopener");
-      };
-
-      item.appendChild(btn);
-    }
-
-    list.appendChild(item);
-  }
-}
-
-if (isAdmin) {
-  const selector = document.createElement("select");
-  selector.style.margin = "12px";
-  content.insertBefore(selector, list);
-
-  const { data: employees, error } = await supabaseClient
-    .from("employees")
-    .select("id, full_name")
-    .order("full_name");
-
-  if (error) {
-    selector.replaceChildren();
-    selector.add(new Option("Errore caricamento dipendenti", ""));
   } else {
-    selector.add(new Option("Seleziona Dipendente", ""));
-
-    for (const emp of employees || []) {
-      selector.add(new Option(emp.full_name || emp.id, emp.id));
-    }
-
-    selector.onchange = () => {
-      if (selector.value) showDocuments(selector.value);
-      else list.textContent = "Seleziona un dipendente.";
-    };
+    await showDocuments(user.id);
   }
-
-  list.textContent = "Seleziona un dipendente.";
-} else {
-  await showDocuments(user.id);
 }
 
-}
     else if (
   page !== "salary" &&
   page !== "workhours" &&
