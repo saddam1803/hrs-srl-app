@@ -622,7 +622,11 @@ if (dbError) {
 alert("PDF and document details saved successfully.");
 
       };
-      document.body.appendChild(picker);
+      document.querySelectorAll('input[type="file"]').forEach(input => {
+  if (input !== picker) input.remove();
+});
+
+document.body.appendChild(picker);
 picker.style.display = "block";
     };
   }
