@@ -583,6 +583,14 @@ else if (page === "documents") {
         const path = employees[0].id + "/" +
           crypto.randomUUID() + ".pdf";
 
+const { error: sessionError } =
+  await supabaseClient.auth.refreshSession();
+
+if (sessionError) {
+  alert("Login session expired. Please log in again.");
+  return;
+}
+
         const { error } = await supabaseClient.storage
           .from("employee-documents")
           .upload(path, file, { contentType: "application/pdf" });
