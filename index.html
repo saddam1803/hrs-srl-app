@@ -583,8 +583,13 @@ else if (page === "documents") {
         const path = employees[0].id + "/" +
           crypto.randomUUID() + ".pdf";
 
-const { error: sessionError } =
-  await supabaseClient.auth.refreshSession();
+const { data: sessionData, error: sessionError } =
+  await supabaseClient.auth.getSession();
+
+if (!sessionData?.session) {
+  alert("Session expired. Please log in again.");
+  return;
+}
 
 if (sessionError) {
   alert("Login session expired. Please log in again.");
