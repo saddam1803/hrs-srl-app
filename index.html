@@ -625,7 +625,7 @@ else if (page === "documents") {
       await supabaseClient
         .from("employee_documents")
         .select(
-          "employee_id,document_type,original_filename,file_path"
+        "employee_id,document_type,document_name,file_path"
         )
         .eq("employee_id", employeeId);
 
@@ -664,7 +664,7 @@ else if (page === "documents") {
       name.textContent =
         (record.document_type || "Documento") +
         " — " +
-        (record.original_filename || "Documento PDF");
+      (record.document_name || "Documento PDF");
 
       item.appendChild(name);
 
@@ -814,7 +814,7 @@ else if (page === "documents") {
             .insert({
               employee_id: employeeId,
               document_type: typeSelect.value,
-              original_filename: file.name,
+              document_name: file.name,
               file_path: uploaded?.path || path
             });
 
