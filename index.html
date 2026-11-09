@@ -186,6 +186,98 @@ async function openPage(page) {
 
       const content = document.getElementById("pageContent");
       content.innerHTML = "";
+  if (page === "sites") {
+  const { data: isAdmin, error: permissionError } =
+    await supabaseClient.rpc("is_admin");
+
+  if (permissionError) {
+    content.textContent = "Impossibile verificare i permessi.";
+    return;
+  }
+
+  if (isAdmin === true) {
+    const { data: employees, error: employeeError } = await supabaseClient
+      .from("employees")
+      .select("id, full_name")
+      .eq("active", true)
+      .order("full_name");
+
+    if (employeeError || !employees?.length) {
+      content.textContent = employeeError
+        ? "Impossibile caricare i dipendenti."
+        : "Nessun dipendente attivo disponibile.";
+      return;
+    }
+
+    const form = document.createElement("form");
+    form.innerHTML = `
+      <h3>Aggiungi cantiere</h3>
+      <p><label>Nome <input name="siteName" required></label></p>
+      <p><label>Indirizzo <input name="address" required></label></p>
+      <p><label>Latitudine <input name="latitude" type="number"
+        step="any" min="-90" max="90" required></label></p>
+      <p><label>Longitudine <input name="longitude" type="number"
+        step="any" min="-180" max="180" required></label></p>
+      <p><label>Raggio GPS (metri) <input name="radius" type="number"
+        min="1" max="2147483647" step="1" value="150" required></label></p>
+      <fieldset><legend>Assegna dipendenti</legend></fieldset>
+      <p><button class="action" type="submit">Salva cantiere</button></p>
+      <p role="status"></p>
+    `;
+
+    const workers = form.querySelector("fieldset");
+    for (const employee of employees) {
+      const row = document.createElement("div");
+      const label = document.createElement("label");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.name = "employee";
+      checkbox.value = employee.id;
+      label.append(checkbox, " ", employee.full_name || employee.id);
+      row.append(label);
+      workers.append(row);
+    }
+
+    const save = form.querySelector("button");
+    const status = form.querySelector('[role="status"]');
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (save.disabled) return;
+
+      const fields = new FormData(form);
+      const employeeIds = fields.getAll("employee");
+      if (!employeeIds.length) {
+        status.textContent = "Seleziona almeno un dipendente.";
+        return;
+      }
+
+      save.disabled = true;
+      status.textContent = "Salvataggio in corso…";
+
+      try {
+        const { error } = await supabaseClient.rpc("create_cantiere", {
+          p_name: fields.get("siteName").trim(),
+          p_address: fields.get("address").trim(),
+          p_latitude: Number(fields.get("latitude")),
+          p_longitude: Number(fields.get("longitude")),
+          p_radius_m: Number(fields.get("radius")),
+          p_employee_ids: employeeIds
+        });
+        if (error) throw error;
+
+        form.reset();
+        status.textContent = "Cantiere salvato e dipendenti assegnati.";
+      } catch (error) {
+        status.textContent = "Salvataggio non confermato: " + error.message;
+      } finally {
+        save.disabled = false;
+      }
+    });
+
+    content.append(form);
+    return;
+  }
+}
 if (page === "salary") {
   const title = document.createElement("h3");
   title.textContent = "Employee Salary Management";
