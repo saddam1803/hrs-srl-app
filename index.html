@@ -196,6 +196,89 @@ async function openPage(page) {
   }
 
   if (isAdmin === true) {
+    const attendancePanel = document.createElement("section");
+const attendanceTitle = document.createElement("h3");
+attendanceTitle.textContent = "Presenze per cantiere";
+const attendanceList = document.createElement("div");
+attendanceList.textContent = "Caricamento presenze…";
+attendancePanel.append(attendanceTitle, attendanceList);
+content.append(attendancePanel);
+
+async function loadSiteAttendance() {
+  const today = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
+  const date = today.format(new Date());
+
+  // Read a window that covers the whole Italian calendar day.
+  const utcMidnight = Date.parse(`${date}T00:00:00Z`);
+  const from = new Date(utcMidnight - 2 * 3600000).toISOString();
+  const until = new Date(utcMidnight + 24 * 3600000).toISOString();
+
+  const [sitesResult, assignmentsResult, eventsResult] = await Promise.all([
+    supabaseClient.from("sites")
+      .select("id, name").eq("active", true).order("name"),
+    supabaseClient.from("employee_sites")
+      .select("site_id, employee_id, employees(full_name, active)"),
+    supabaseClient.from("attendance")
+      .select("site_id, employee_id, event_type, event_time")
+      .gte("event_time", from).lt("event_time", until)
+      .in("event_type", ["check_in", "check_out"])
+      .order("event_time", { ascending: false })
+      .order("id", { ascending: false })
+  ]);
+
+  const error = sitesResult.error || assignmentsResult.error || eventsResult.error;
+  if (error) throw error;
+
+  const latest = new Map();
+  for (const event of eventsResult.data) {
+    if (today.format(new Date(event.event_time)) !== date) continue;
+    const key = `${event.site_id}/${event.employee_id}`;
+    if (!latest.has(key)) latest.set(key, event.event_type);
+  }
+
+  attendanceList.replaceChildren();
+  if (!sitesResult.data.length) {
+    attendanceList.textContent = "Nessun cantiere attivo.";
+    return;
+  }
+
+  for (const site of sitesResult.data) {
+    const heading = document.createElement("h4");
+    heading.textContent = site.name;
+    attendanceList.append(heading);
+
+    const assigned = assignmentsResult.data.filter(
+      row => row.site_id === site.id && row.employees?.active === true
+    );
+    if (!assigned.length) {
+      const message = document.createElement("p");
+      message.textContent = "Nessun dipendente attivo assegnato.";
+      attendanceList.append(message);
+      continue;
+    }
+
+    const list = document.createElement("ul");
+    for (const row of assigned) {
+      const event = latest.get(`${site.id}/${row.employee_id}`);
+      const status = event === "check_in" ? "Check-out da fare"
+        : event === "check_out" ? "Check-out registrato"
+        : "Nessuna timbratura oggi";
+      const item = document.createElement("li");
+      item.textContent = `${row.employees.full_name || "Dipendente"} — ${status}`;
+      list.append(item);
+    }
+    attendanceList.append(list);
+  }
+}
+
+loadSiteAttendance().catch(error => {
+  attendanceList.textContent = "Impossibile caricare le presenze: " + error.message;
+});
     const { data: employees, error: employeeError } = await supabaseClient
       .from("employees")
       .select("id, full_name")
