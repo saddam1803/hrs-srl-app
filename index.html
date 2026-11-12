@@ -481,6 +481,157 @@ if (page === "owner") {
 }
 
   if (page === "employees") {
+    const { data: bankAdmin, error: bankPermissionError } =
+  await supabaseClient.rpc("is_admin");
+
+if (bankPermissionError) {
+  content.textContent = "Impossibile verificare i permessi.";
+  return;
+}
+
+if (bankAdmin === true) {
+  const bankSection = document.createElement("section");
+  bankSection.innerHTML = `
+    <h3>Dati bancari del dipendente</h3>
+    <form>
+      <p><label>Dipendente
+        <select name="employee" required>
+          <option value="">Seleziona dipendente</option>
+        </select>
+      </label></p>
+      <p role="status"></p>
+      <p><button type="button">Mostra IBAN</button></p>
+      <p><label>IBAN
+        <input name="iban" type="password" required
+          minlength="15" maxlength="42" autocomplete="off"
+          autocapitalize="characters" spellcheck="false">
+      </label></p>
+      <p><button type="submit" class="action">Salva IBAN</button></p>
+    </form>
+  `;
+  content.append(bankSection);
+
+  const bankForm = bankSection.querySelector("form");
+  const employeePicker = bankForm.elements.employee;
+  const ibanInput = bankForm.elements.iban;
+  const bankStatus = bankForm.querySelector('[role="status"]');
+  const revealButton = bankForm.querySelector('[type="button"]');
+  const bankSave = bankForm.querySelector('[type="submit"]');
+  ibanInput.disabled = true;
+  bankSave.disabled = true;
+  revealButton.disabled = true;
+
+  const { data: bankEmployees, error: bankEmployeesError } =
+    await supabaseClient.from("employees")
+      .select("id, full_name").order("full_name");
+
+  if (bankEmployeesError) {
+    bankStatus.textContent = "Impossibile caricare i dipendenti.";
+  } else {
+    for (const employee of bankEmployees || []) {
+      employeePicker.add(new Option(
+        employee.full_name || employee.id, employee.id
+      ));
+    }
+  }
+
+  let bankLoadVersion = 0;
+  employeePicker.onchange = async () => {
+    const version = ++bankLoadVersion;
+    const employeeId = employeePicker.value;
+    ibanInput.value = "";
+    ibanInput.type = "password";
+    revealButton.textContent = "Mostra IBAN";
+    ibanInput.disabled = true;
+    bankSave.disabled = true;
+    revealButton.disabled = true;
+    bankStatus.textContent = "";
+    if (!employeeId) return;
+
+    bankStatus.textContent = "Caricamento…";
+    try {
+      const { data, error } = await supabaseClient
+        .from("employee_bank_details").select("iban")
+        .eq("employee_id", employeeId).maybeSingle();
+      if (version !== bankLoadVersion) return;
+      if (error) throw error;
+
+      ibanInput.value = data?.iban || "";
+      bankStatus.textContent = data
+        ? "IBAN registrato •••• " + data.iban.slice(-4)
+        : "Nessun IBAN registrato.";
+      ibanInput.disabled = false;
+      bankSave.disabled = false;
+      revealButton.disabled = false;
+    } catch {
+      if (version === bankLoadVersion) {
+        bankStatus.textContent = "Impossibile caricare l’IBAN.";
+      }
+    }
+  };
+
+  revealButton.onclick = () => {
+    const show = ibanInput.type === "password";
+    ibanInput.type = show ? "text" : "password";
+    revealButton.textContent = show ? "Nascondi IBAN" : "Mostra IBAN";
+  };
+
+  bankForm.onsubmit = async (event) => {
+    event.preventDefault();
+    if (bankSave.disabled || !employeePicker.value) return;
+
+    const iban = ibanInput.value.replace(/\s/g, "").toUpperCase();
+    const italianLengthValid = !iban.startsWith("IT") || iban.length === 27;
+    if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/.test(iban)
+        || !italianLengthValid) {
+      bankStatus.textContent = "Controlla il formato IBAN.";
+      return;
+    }
+
+    const rearranged = iban.slice(4) + iban.slice(0, 4);
+    let remainder = 0;
+    for (const character of rearranged) {
+      const digits = /[A-Z]/.test(character)
+        ? String(character.charCodeAt(0) - 55) : character;
+      for (const digit of digits) {
+        remainder = (remainder * 10 + Number(digit)) % 97;
+      }
+    }
+    if (remainder !== 1) {
+      bankStatus.textContent = "IBAN non valido. Controlla le cifre.";
+      return;
+    }
+
+    employeePicker.disabled = true;
+    bankSave.disabled = true;
+    ibanInput.disabled = true;
+    bankStatus.textContent = "Salvataggio…";
+
+    try {
+      const { error } = await supabaseClient
+        .from("employee_bank_details")
+        .upsert({
+          employee_id: employeePicker.value,
+          iban,
+          updated_at: new Date().toISOString()
+        }, { onConflict: "employee_id" })
+        .select("employee_id").single();
+      if (error) throw error;
+
+      ibanInput.value = iban;
+      ibanInput.type = "password";
+      revealButton.textContent = "Mostra IBAN";
+      bankStatus.textContent = "IBAN salvato •••• " + iban.slice(-4);
+    } catch {
+      bankStatus.textContent =
+        "Salvataggio non confermato. Ricarica il dipendente prima di riprovare.";
+    } finally {
+      employeePicker.disabled = false;
+      bankSave.disabled = false;
+      ibanInput.disabled = false;
+    }
+  };
+}
   const info = document.createElement("p");
 info.textContent = "কর্মচারীদের তালিকা লোড হচ্ছে...";
 const addButton = document.createElement("button");
