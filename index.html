@@ -619,6 +619,106 @@ if (bankPermissionError) {
 }
 
 if (bankAdmin === true) {
+  const reviewSection = document.createElement("section");
+const reviewTitle = document.createElement("h3");
+reviewTitle.textContent = "Richieste modifica IBAN";
+const reviewList = document.createElement("div");
+reviewList.textContent = "Caricamento richieste...";
+reviewSection.append(reviewTitle, reviewList);
+content.append(reviewSection);
+
+async function loadIbanReviews() {
+  try {
+    const { data: requests, error } = await supabaseClient
+      .from("iban_change_requests")
+      .select("id, employee_id, requested_iban, created_at")
+      .eq("status", "pending")
+      .order("created_at");
+
+    if (error) throw error;
+
+    reviewList.replaceChildren();
+    if (!requests.length) {
+      reviewList.textContent = "Nessuna richiesta in attesa.";
+      return;
+    }
+
+    const { data: workers, error: workerError } =
+      await supabaseClient.from("employees")
+        .select("id, full_name");
+    if (workerError) throw workerError;
+
+    for (const request of requests) {
+      const row = document.createElement("div");
+      const name = document.createElement("p");
+      const worker = workers.find(
+        item => item.id === request.employee_id
+      );
+      name.textContent = worker?.full_name || "Dipendente";
+
+      const iban = document.createElement("input");
+      iban.type = "password";
+      iban.readOnly = true;
+      iban.value = request.requested_iban;
+      iban.setAttribute("aria-label", "IBAN richiesto");
+
+      const reveal = document.createElement("button");
+      reveal.type = "button";
+      reveal.textContent = "Mostra IBAN";
+      reveal.onclick = () => {
+        const show = iban.type === "password";
+        iban.type = show ? "text" : "password";
+        reveal.textContent = show ? "Nascondi IBAN" : "Mostra IBAN";
+      };
+
+      const message = document.createElement("p");
+      message.setAttribute("role", "status");
+      const approve = document.createElement("button");
+      const reject = document.createElement("button");
+      approve.type = reject.type = "button";
+      approve.className = reject.className = "action";
+      approve.textContent = "Approva";
+      reject.textContent = "Rifiuta";
+
+      async function review(accept) {
+        if (approve.disabled) return;
+        const question = accept
+          ? "Approvare e sostituire l’IBAN del dipendente?"
+          : "Rifiutare questa richiesta?";
+        if (!confirm(question)) return;
+
+        approve.disabled = reject.disabled = true;
+        message.textContent = "Salvataggio...";
+        try {
+          const { error } = await supabaseClient.rpc(
+            "review_iban_request",
+            {
+              p_request_id: request.id,
+              p_approve: accept
+            }
+          );
+          if (error) throw error;
+        } catch {
+          message.textContent =
+            "Esito non confermato. Riapri Employees per verificare.";
+          return;
+        }
+
+        await openPage("employees");
+      }
+
+      approve.onclick = () => review(true);
+      reject.onclick = () => review(false);
+      row.append(name, iban, reveal, approve, reject, message);
+      reviewList.append(row);
+    }
+  } catch {
+    reviewList.textContent =
+      "Impossibile caricare le richieste. Riapri Employees.";
+  }
+}
+
+loadIbanReviews();
   const bankSection = document.createElement("section");
   bankSection.innerHTML = `
     <h3>Dati bancari del dipendente</h3>
