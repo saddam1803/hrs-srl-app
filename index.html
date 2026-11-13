@@ -143,7 +143,9 @@
   </section>
     <section id="employeeDashboard" style="display:none;">
   <h2>Employee Dashboard</h2>
-
+<button class="card" onclick="openPage('iban_request')">
+  Richiedi modifica IBAN
+</button>
   <button class="card" onclick="openPage('attendance')">
     GPS Check-in / Check-out
   </button>
@@ -167,6 +169,7 @@
 
   <script>
     const pages = {
+  iban_request: "Richiedi modifica IBAN", 
   employees: "Employees",
   sites: "Construction Sites",
   attendance: "GPS Attendance",
@@ -186,6 +189,132 @@ async function openPage(page) {
 
       const content = document.getElementById("pageContent");
       content.innerHTML = "";
+  if (page === "iban_request") {
+  document.getElementById("employeeDashboard").style.display = "none";
+
+  const { data: authData, error: authError } =
+    await supabaseClient.auth.getUser();
+
+  if (authError || !authData?.user) {
+    content.textContent = "Effettua prima il login.";
+    return;
+  }
+
+  const employeeId = authData.user.id;
+  const form = document.createElement("form");
+  form.innerHTML = `
+    <h3>Richiedi modifica IBAN</h3>
+    <p>Il nuovo IBAN sarà attivo dopo l’approvazione.</p>
+    <p><label>Nuovo IBAN
+      <input name="newIban" type="password" required
+        minlength="15" maxlength="42" autocomplete="off"
+        autocapitalize="characters" spellcheck="false">
+    </label></p>
+    <p><button type="button">Mostra IBAN</button></p>
+    <p><button type="submit" class="action">Invia richiesta</button></p>
+    <p role="status"></p>
+  `;
+  content.append(form);
+
+  const input = form.elements.newIban;
+  const send = form.querySelector('[type="submit"]');
+  const reveal = form.querySelector('[type="button"]');
+  const status = form.querySelector('[role="status"]');
+
+  // IBAN_CONTINUA
+    reveal.onclick = () => {
+  const show = input.type === "password";
+  input.type = show ? "text" : "password";
+  reveal.textContent = show ? "Nascondi IBAN" : "Mostra IBAN";
+};
+
+async function loadRequestStatus() {
+  send.disabled = true;
+  input.disabled = true;
+  status.textContent = "Caricamento richiesta…";
+
+  try {
+    const { data, error } = await supabaseClient
+      .from("iban_change_requests")
+      .select("id, status, created_at")
+      .eq("employee_id", employeeId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    const pending = data?.status === "pending";
+    send.disabled = pending;
+    input.disabled = pending;
+
+    const labels = {
+      pending: "Richiesta in attesa di approvazione.",
+      approved: "Ultima richiesta approvata.",
+      rejected: "Ultima richiesta rifiutata. Puoi inviarne una nuova."
+    };
+    status.textContent = data
+      ? labels[data.status]
+      : "Nessuna richiesta precedente.";
+  } catch {
+    status.textContent =
+      "Impossibile verificare le richieste. Riapri questa pagina.";
+  }
+}
+
+// IBAN_INVIO
+    form.onsubmit = async (event) => {
+  event.preventDefault();
+  if (send.disabled) return;
+
+  const iban = input.value.replace(/\s/g, "").toUpperCase();
+  if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/.test(iban)
+      || (iban.startsWith("IT") && iban.length !== 27)) {
+    status.textContent = "Controlla il formato IBAN.";
+    return;
+  }
+
+  let remainder = 0;
+  for (const character of iban.slice(4) + iban.slice(0, 4)) {
+    const digits = /[A-Z]/.test(character)
+      ? String(character.charCodeAt(0) - 55) : character;
+    for (const digit of digits) {
+      remainder = (remainder * 10 + Number(digit)) % 97;
+    }
+  }
+  if (remainder !== 1) {
+    status.textContent = "IBAN non valido. Controlla le cifre.";
+    return;
+  }
+
+  send.disabled = true;
+  input.disabled = true;
+  status.textContent = "Invio in corso…";
+
+  try {
+    const { error } = await supabaseClient
+      .from("iban_change_requests")
+      .insert({
+        employee_id: employeeId,
+        requested_iban: iban
+      });
+    if (error) throw error;
+
+    input.value = "";
+    input.type = "password";
+    reveal.textContent = "Mostra IBAN";
+    status.textContent = "Richiesta inviata. In attesa di approvazione.";
+  } catch {
+    await loadRequestStatus();
+    if (!send.disabled) {
+      status.textContent =
+        "Invio non confermato. Controlla i dati prima di riprovare.";
+    }
+  }
+};
+await loadRequestStatus();
+  return;
+}
   if (page === "sites") {
   const { data: isAdmin, error: permissionError } =
     await supabaseClient.rpc("is_admin");
@@ -1202,10 +1331,20 @@ page !== "notifications"
 
     }
 
-    function goHome() {
-      document.getElementById("page").style.display = "none";
-      document.getElementById("dashboard").style.display = "block";
-    }
+    async function goHome() {
+  const { data, error } = await supabaseClient.rpc("is_admin");
+
+  if (error) {
+    alert("Impossibile verificare i permessi. Riprova.");
+    return;
+  }
+
+  document.getElementById("page").style.display = "none";
+  document.getElementById("dashboard").style.display =
+    data === true ? "block" : "none";
+  document.getElementById("employeeDashboard").style.display =
+    data === true ? "none" : "block";
+}
 
     async function loginUser() {
       alert("Login button connected");
