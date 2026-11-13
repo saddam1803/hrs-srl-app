@@ -1472,5 +1472,76 @@ if (saveError) {
 }
 
   </script>
+  <section id="passwordResetBox" style="display:none;padding:24px">
+  <h2>Imposta nuova password</h2>
+  <form id="passwordResetForm">
+    <p>
+      <input name="password" type="password"
+        placeholder="Nuova password" minlength="8"
+        autocomplete="new-password" required>
+    </p>
+    <p>
+      <input name="confirmPassword" type="password"
+        placeholder="Conferma password" minlength="8"
+        autocomplete="new-password" required>
+    </p>
+    <button class="action" type="submit">Salva password</button>
+    <p role="status"></p>
+  </form>
+</section>
+
+<script>
+(() => {
+  const box = document.getElementById("passwordResetBox");
+  const form = document.getElementById("passwordResetForm");
+  const button = form.querySelector("button");
+  const status = form.querySelector('[role="status"]');
+
+  function showReset() {
+    for (const id of [
+      "loginBox", "dashboard", "employeeDashboard", "page"
+    ]) {
+      const element = document.getElementById(id);
+      if (element) element.style.display = "none";
+    }
+    box.style.display = "block";
+  }
+
+  supabaseClient.auth.onAuthStateChange((event) => {
+    if (event === "PASSWORD_RECOVERY") showReset();
+  });
+
+  const recovery = new URLSearchParams(location.hash.slice(1));
+  if (recovery.get("type") === "recovery") showReset();
+
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    if (button.disabled) return;
+
+    const password = form.elements.password.value;
+    if (password !== form.elements.confirmPassword.value) {
+      status.textContent = "Le password non coincidono.";
+      return;
+    }
+
+    button.disabled = true;
+    status.textContent = "Salvataggio...";
+    try {
+      const { error } = await supabaseClient.auth.updateUser({
+        password
+      });
+      if (error) throw error;
+
+      form.reset();
+      status.textContent = "Password salvata. Riapri l’app e accedi.";
+      await supabaseClient.auth.signOut({ scope: "local" });
+      history.replaceState(null, "", location.pathname);
+    } catch (error) {
+      status.textContent = "Errore: " + error.message;
+      button.disabled = false;
+    }
+  };
+})();
+</script>
 </body>
 </html>
