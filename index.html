@@ -1383,6 +1383,7 @@ else if (page === "documents") {
               employee_id: employeeId,
               document_type: typeSelect.value,
               document_name: file.name,
+              uploaded_by: sessionData.session.user.id,
               file_path: uploaded?.path || path
             });
 
