@@ -1338,6 +1338,14 @@ else if (page === "documents") {
       message.textContent = "";
 
       try {
+        try {
+  await file.slice(0, 16).arrayBuffer();
+} catch {
+  throw new Error(
+    "FASE FILE: Impossibile leggere il PDF dal telefono. " +
+    "Scaricalo nella cartella Download e selezionalo da lì."
+  );
+}
         const { data: sessionData, error: sessionError } =
           await supabaseClient.auth.getSession();
 
@@ -1361,7 +1369,12 @@ else if (page === "documents") {
               upsert: false
             });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+  throw new Error(
+    "FASE STORAGE: " + uploadError.message +
+    " | Codice: " + (uploadError.statusCode || "non disponibile")
+  );
+}
 
         const { error: dbError } =
           await supabaseClient
