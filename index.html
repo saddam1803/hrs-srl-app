@@ -914,24 +914,74 @@ addButton.className = "action";
 
 addButton.onclick = async () => {
   const name = prompt("কর্মচারীর পুরো নাম লিখুন:");
-  if (!name || !name.trim()) return;
+  if (!name?.trim()) return;
 
   const email = prompt("কর্মচারীর ইমেইল লিখুন:");
-  if (!email || !email.trim()) return;
+  if (!email?.trim()) return;
 
-  const { error } = await supabaseClient
-    .from("employees")
-    .insert({
-      full_name: name.trim(),
-      email: email.trim(),
-      role: "employee",
-      active: true
-    });
-  if (error) {
-    alert("কর্মচারী যোগ করা যায়নি: " + error.message);
-  } else {
-    alert("কর্মচারী সফলভাবে যোগ হয়েছে!");
-    openPage("employees");
+  const confirmed = confirm(
+    "নতুন কর্মী তৈরি করে এই ইমেইলে আমন্ত্রণ পাঠাবেন?\n\n" +
+    name.trim() + "\n" + email.trim()
+  );
+  if (!confirmed) return;
+
+  addButton.disabled = true;
+  addButton.textContent = "Invio in corso...";
+
+  try {
+    const { data: sessionData, error: sessionError } =
+      await supabaseClient.auth.getSession();
+
+    if (sessionError) throw sessionError;
+
+    if (!sessionData.session) {
+      throw new Error("আবার অ্যাডমিন অ্যাকাউন্টে লগইন করুন।");
+    }
+
+    const { data, error } = await supabaseClient.functions.invoke(
+      "hrs-create-employee",
+      {
+        headers: {
+          Authorization:
+            "Bearer " + sessionData.session.access_token
+        },
+        body: {
+          full_name: name.trim(),
+          email: email.trim().toLowerCase()
+        }
+      }
+    );
+
+    if (error) {
+      let details = error.message;
+
+      if (error.context instanceof Response) {
+        try {
+          const result = await error.context.json();
+          details = result.error || details;
+        } catch {}
+      }
+
+      throw new Error(details);
+    }
+
+    if (!data?.success) {
+      throw new Error(data?.error || "কর্মী যোগ করা যায়নি।");
+    }
+
+    alert(
+      "কর্মীর প্রোফাইল তৈরি হয়েছে এবং আমন্ত্রণ পাঠানো হয়েছে।"
+    );
+    await openPage("employees");
+  } catch (error) {
+    alert(
+      "অনুরোধ সম্পূর্ণ করা যায়নি: " +
+      (error?.message || String(error)) +
+      "\n\nআবার চেষ্টা করার আগে ফলাফল যাচাই করুন।"
+    );
+  } finally {
+    addButton.disabled = false;
+    addButton.textContent = "+ Add Employee";
   }
 };
 
