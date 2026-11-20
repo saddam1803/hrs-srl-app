@@ -370,6 +370,126 @@ if (isAdmin === false) {
   return;
 }
   if (isAdmin === true) {
+    const assignPanel = document.createElement("section");
+content.appendChild(assignPanel);
+
+const assignTitle = document.createElement("h3");
+assignTitle.textContent = "Assegna dipendente a un cantiere";
+
+const assignMessage = document.createElement("p");
+assignMessage.textContent = "Caricamento...";
+
+assignPanel.append(assignTitle, assignMessage);
+
+const [assignSitesResult, assignWorkersResult] =
+  await Promise.all([
+    supabaseClient
+      .from("sites")
+      .select("id, name")
+      .eq("active", true)
+      .order("name"),
+    supabaseClient
+      .from("employees")
+      .select("id, full_name, email")
+      .eq("role", "employee")
+      .eq("active", true)
+      .order("full_name")
+  ]);
+
+if (assignSitesResult.error || assignWorkersResult.error) {
+  assignMessage.textContent =
+    "Errore: " +
+    (assignSitesResult.error || assignWorkersResult.error).message;
+} else if (
+  !assignSitesResult.data?.length ||
+  !assignWorkersResult.data?.length
+) {
+  assignMessage.textContent =
+    "Servono un cantiere attivo e un dipendente attivo.";
+} else {
+  assignMessage.textContent = "";
+
+  const assignForm = document.createElement("form");
+
+  const siteLabel = document.createElement("label");
+  siteLabel.textContent = "Cantiere";
+  const siteSelect = document.createElement("select");
+  siteSelect.required = true;
+  siteSelect.add(new Option("Seleziona cantiere", ""));
+
+  for (const site of assignSitesResult.data) {
+    siteSelect.add(new Option(site.name, site.id));
+  }
+  siteLabel.appendChild(siteSelect);
+
+  const workerLabel = document.createElement("label");
+  workerLabel.textContent = "Dipendente";
+  const workerSelect = document.createElement("select");
+  workerSelect.required = true;
+  workerSelect.add(new Option("Seleziona dipendente", ""));
+
+  for (const worker of assignWorkersResult.data) {
+    workerSelect.add(new Option(
+      worker.full_name + " — " + worker.email,
+      worker.id
+    ));
+  }
+  workerLabel.appendChild(workerSelect);
+
+  const assignSubmit = document.createElement("button");
+  assignSubmit.type = "submit";
+  assignSubmit.className = "action";
+  assignSubmit.textContent = "Assegna al cantiere";
+
+  assignForm.append(
+    siteLabel,
+    document.createElement("br"),
+    workerLabel,
+    document.createElement("br"),
+    assignSubmit
+  );
+  assignPanel.appendChild(assignForm);
+
+  assignForm.onsubmit = async (event) => {
+    event.preventDefault();
+    if (assignSubmit.disabled || !assignForm.reportValidity()) return;
+
+    if (!confirm(
+      "Confermi l'assegnazione?\n" +
+      workerSelect.selectedOptions[0].textContent + "\n" +
+      siteSelect.selectedOptions[0].textContent
+    )) return;
+
+    assignSubmit.disabled = true;
+    assignMessage.textContent = "Salvataggio...";
+
+    try {
+      const { error } = await supabaseClient
+        .from("employee_sites")
+        .insert({
+          employee_id: workerSelect.value,
+          site_id: siteSelect.value
+        });
+
+      if (error) {
+        if (error.code === "23505") {
+          assignMessage.textContent =
+            "Dipendente già assegnato a questo cantiere.";
+          return;
+        }
+        throw error;
+      }
+
+      assignMessage.textContent = "Assegnazione salvata.";
+      await loadSiteAttendance();
+    } catch (error) {
+      assignMessage.textContent =
+        "Errore: " + (error?.message || String(error));
+    } finally {
+      assignSubmit.disabled = false;
+    }
+  };
+}
     const attendancePanel = document.createElement("section");
 const attendanceTitle = document.createElement("h3");
 attendanceTitle.textContent = "Presenze per cantiere";
