@@ -323,7 +323,52 @@ await loadRequestStatus();
     content.textContent = "Impossibile verificare i permessi.";
     return;
   }
+if (isAdmin === false) {
+  const { data: userData, error: userError } =
+    await supabaseClient.auth.getUser();
 
+  if (userError || !userData.user) {
+    content.textContent = "Effettua nuovamente il login.";
+    return;
+  }
+
+  const { data: assignments, error: sitesError } =
+    await supabaseClient
+      .from("employee_sites")
+      .select("sites(id, name, address, active)")
+      .eq("employee_id", userData.user.id);
+
+  if (sitesError) {
+    content.textContent =
+      "Errore caricamento cantieri: " + sitesError.message;
+    return;
+  }
+
+  const mySites = (assignments || [])
+    .map(item => item.sites)
+    .filter(site => site && site.active);
+
+  if (mySites.length === 0) {
+    content.textContent = "Nessun cantiere assegnato.";
+    return;
+  }
+
+  for (const site of mySites) {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const name = document.createElement("h3");
+    name.textContent = site.name;
+
+    const address = document.createElement("p");
+    address.textContent = site.address;
+
+    card.append(name, address);
+    content.appendChild(card);
+  }
+
+  return;
+}
   if (isAdmin === true) {
     const attendancePanel = document.createElement("section");
 const attendanceTitle = document.createElement("h3");
