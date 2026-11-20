@@ -143,6 +143,79 @@
   </section>
     <section id="employeeDashboard" style="display:none;">
   <h2>Employee Dashboard</h2>
+      <button class="card" onclick="loadEmployeeNotifications()">
+  🔔 Le mie notifiche
+</button>
+<div id="employeeNotificationList" role="status"></div>
+
+<script>
+async function loadEmployeeNotifications() {
+  const box = document.getElementById("employeeNotificationList");
+  box.textContent = "Caricamento...";
+
+  const { data: authData, error: authError } =
+    await supabaseClient.auth.getUser();
+
+  if (authError || !authData?.user) {
+    box.textContent = "Effettua nuovamente il login.";
+    return;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("employee_notifications")
+    .select("id,message,is_read,created_at")
+    .eq("employee_id", authData.user.id)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) {
+    box.textContent = "Errore caricamento notifiche: " + error.message;
+    return;
+  }
+
+  box.replaceChildren();
+
+  if (!data?.length) {
+    box.textContent = "Nessuna notifica.";
+    return;
+  }
+
+  for (const item of data) {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const text = document.createElement("p");
+    text.textContent =
+      (item.is_read ? "" : "🔵 ") + item.message + " — " +
+      new Date(item.created_at).toLocaleString("it-IT");
+    card.appendChild(text);
+
+    if (!item.is_read) {
+      const button = document.createElement("button");
+      button.textContent = "Segna come letta";
+      button.onclick = async () => {
+        button.disabled = true;
+        const { error: updateError } = await supabaseClient
+          .from("employee_notifications")
+          .update({ is_read: true })
+          .eq("id", item.id)
+          .eq("employee_id", authData.user.id);
+
+        if (updateError) {
+          alert(updateError.message);
+          button.disabled = false;
+          return;
+        }
+
+        await loadEmployeeNotifications();
+      };
+      card.appendChild(button);
+    }
+
+    box.appendChild(card);
+  }
+}
+</script>
 <button class="card" onclick="openPage('iban_request')">
   Richiedi modifica IBAN
 </button>
