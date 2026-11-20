@@ -1716,12 +1716,25 @@ if (saveError) {
     box.style.display = "block";
   }
 
-  supabaseClient.auth.onAuthStateChange((event) => {
-    if (event === "PASSWORD_RECOVERY") showReset();
-  });
+  const linkType = new URLSearchParams(
+  location.hash.slice(1)
+).get("type");
 
-  const recovery = new URLSearchParams(location.hash.slice(1));
-  if (recovery.get("type") === "recovery") showReset();
+supabaseClient.auth.onAuthStateChange((event) => {
+  if (
+    event === "PASSWORD_RECOVERY" ||
+    (
+      (event === "SIGNED_IN" || event === "INITIAL_SESSION") &&
+      linkType === "invite"
+    )
+  ) {
+    showReset();
+  }
+});
+
+if (linkType === "recovery" || linkType === "invite") {
+  showReset();
+}
 
   form.onsubmit = async (event) => {
     event.preventDefault();
