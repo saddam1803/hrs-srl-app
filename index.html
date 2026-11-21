@@ -1727,28 +1727,64 @@ else if (page === "documents") {
   );
 }
 
-        const { error: dbError } =
-          await supabaseClient
-            .from("employee_documents")
-            .insert({
-              employee_id: employeeId,
-              document_type: typeSelect.value,
-              document_name: file.name,
-              uploaded_by: sessionData.session.user.id,
-              file_path: uploaded?.path || path
-            });
+        const documentType = typeSelect.value;
 
-        if (dbError) {
-          throw new Error(
-            "PDF caricato nello Storage, ma dati non salvati: " +
-            dbError.message
-          );
+const { data: savedDocument, error: dbError } =
+  await supabaseClient
+    .from("employee_documents")
+    .insert({
+      employee_id: employeeId,
+      document_type: documentType,
+      document_name: file.name,
+      uploaded_by: sessionData.session.user.id,
+      file_path: uploaded?.path || path
+    })
+    .select("id")
+    .single();
+
+if (dbError) {
+  throw new Error(
+    "PDF caricato nello Storage, ma dati non salvati: " +
+    dbError.message
+  );
+}
+
+message.textContent = "PDF caricato correttamente.";
+
+if (documentType.trim().toLowerCase() === "busta paga") {
+  try {
+    const { data: pushResult, error: pushError } =
+      await supabaseClient.functions.invoke(
+        "hrs-send-employee-notification",
+        {
+          headers: {
+            Authorization:
+              "Bearer " + sessionData.session.access_token
+          },
+          body: { document_id: savedDocument.id }
         }
+      );
 
-        message.textContent =
-          "PDF caricato correttamente.";
+    if (pushError || pushResult?.success !== true) {
+      message.textContent =
+        "PDF salvato. Invio push non riuscito. " +
+        "Non caricare nuovamente il PDF.";
+    } else if (pushResult.status === "no_device") {
+      message.textContent =
+        "PDF salvato. Il dipendente deve attivare " +
+        "le notifiche sul telefono.";
+    } else {
+      message.textContent =
+        "PDF salvato. Notifica inviata al servizio push.";
+    }
+  } catch {
+    message.textContent =
+      "PDF salvato. Invio push non riuscito. " +
+      "Non caricare nuovamente il PDF.";
+  }
+}
 
-        await showDocuments(employeeId);
+await showDocuments(employeeId);
 
       } catch (error) {
         const details =
