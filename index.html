@@ -1531,7 +1531,7 @@ else if (page === "documents") {
       await supabaseClient
         .from("employee_documents")
         .select(
-        "employee_id,document_type,document_name,file_path"
+        "id,employee_id,document_type,document_name,file_path"
         )
         .eq("employee_id", employeeId);
 
@@ -1573,7 +1573,54 @@ else if (page === "documents") {
       (record.document_name || "Documento PDF");
 
       item.appendChild(name);
+if (isAdmin &&
+    record.document_type?.trim().toLowerCase() === "busta paga") {
+  const resend = document.createElement("button");
+  resend.className = "action";
+  resend.textContent = "Reinvia notifica";
 
+  resend.onclick = async () => {
+    if (!confirm("Reinviare la notifica per questa busta paga?")) {
+      return;
+    }
+
+    resend.disabled = true;
+
+    try {
+      const { data: sessionData, error: sessionError } =
+        await supabaseClient.auth.getSession();
+
+      if (sessionError || !sessionData.session) {
+        throw new Error("Effettua nuovamente il login.");
+      }
+
+      const { data, error } = await supabaseClient.functions.invoke(
+        "hrs-send-employee-notification",
+        {
+          headers: {
+            Authorization: "Bearer " +
+              sessionData.session.access_token
+          },
+          body: { document_id: record.id }
+        }
+      );
+
+      if (error || data?.success !== true) {
+        throw new Error("Invio non riuscito.");
+      }
+
+      alert(data.status === "no_device"
+        ? "Nessun telefono registrato per il dipendente."
+        : "Notifica inviata al servizio push.");
+    } catch (error) {
+      alert(error.message || "Invio non riuscito.");
+    } finally {
+      resend.disabled = false;
+    }
+  };
+
+  item.appendChild(resend);
+}
       for (const action of [
         "Visualizza PDF",
         "Scarica PDF"
