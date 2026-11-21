@@ -49,23 +49,9 @@ self.addEventListener("push", function(event) {
 self.addEventListener("notificationclick", function(event) {
   event.notification.close();
 
-  const appUrl = self.location.origin + "/";
-
-  event.waitUntil((async () => {
-    const windows = await self.clients.matchAll({
-      type: "window",
-      includeUncontrolled: true
-    });
-
-    for (const client of windows) {
-      if (new URL(client.url).origin === self.location.origin) {
-        await client.navigate(appUrl);
-        return client.focus();
-      }
-    }
-
-    return self.clients.openWindow(appUrl);
-  })());
+  event.waitUntil(
+    self.clients.openWindow("https://hrs-srl-app.pages.dev/")
+  );
 });
 self.addEventListener("install", function(event) {
   event.waitUntil(self.skipWaiting());
