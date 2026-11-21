@@ -143,6 +143,69 @@
   </section>
     <section id="employeeDashboard" style="display:none;">
   <h2>Employee Dashboard</h2>
+   <button class="card" onclick="enableEmployeePush(this)">
+  🔔 Attiva notifiche sul telefono
+</button>
+
+<script>
+async function enableEmployeePush(button) {
+  button.disabled = true;
+
+  try {
+    if (!("Notification" in window) ||
+        !("serviceWorker" in navigator)) {
+      throw new Error("Notifiche non supportate dal browser.");
+    }
+
+    const { data: sessionData, error: sessionError } =
+      await supabaseClient.auth.getSession();
+
+    if (sessionError || !sessionData.session) {
+      throw new Error("Effettua nuovamente il login.");
+    }
+
+    const permission = await Notification.requestPermission();
+
+    if (permission !== "granted") {
+      throw new Error("Autorizza le notifiche nelle impostazioni del browser.");
+    }
+
+    const registration = await navigator.serviceWorker.register(
+      "./firebase-messaging-sw.js"
+    );
+
+    await navigator.serviceWorker.ready;
+
+    const token = await firebaseMessaging.getToken({
+      vapidKey: "BHgfg2vkw2O8YzmTV0yaY9Esvujygp3pD8V-jtaZyBMQtMsg72e6AAjrQBA18hJ7gWyyR9BYSRwaqqK6ik23ZTY",
+      serviceWorkerRegistration: registration
+    });
+
+    if (!token) throw new Error("Token non disponibile.");
+
+    const { data, error } = await supabaseClient.functions.invoke(
+      "hrs-save-employee-push-token-",
+      {
+        headers: {
+          Authorization: "Bearer " + sessionData.session.access_token
+        },
+        body: { token }
+      }
+    );
+
+    if (error || data?.success !== true) {
+      throw new Error(error?.message || "Salvataggio non riuscito.");
+    }
+
+    button.textContent = "✓ Telefono registrato";
+    alert("Telefono registrato per le notifiche.");
+  } catch (error) {
+    alert(error.message || "Registrazione non riuscita.");
+  } finally {
+    button.disabled = false;
+  }
+}
+</script>   
       <button class="card" onclick="loadEmployeeNotifications()">
   🔔 Le mie notifiche
 </button>
