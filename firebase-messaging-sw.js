@@ -67,3 +67,10 @@ self.addEventListener("notificationclick", function(event) {
     return self.clients.openWindow(appUrl);
   })());
 });
+self.addEventListener("install", function(event) {
+  event.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener("activate", function(event) {
+  event.waitUntil(self.clients.claim());
+});
