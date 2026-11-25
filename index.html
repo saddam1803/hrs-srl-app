@@ -1573,6 +1573,56 @@ else if (page === "documents") {
       (record.document_name || "Documento PDF");
 
       item.appendChild(name);
+      if (isAdmin && record.id && record.file_path) {
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.className = "action";
+  deleteButton.textContent = "Elimina PDF";
+
+  const deleteStatus = document.createElement("p");
+  deleteStatus.setAttribute("role", "status");
+
+  deleteButton.onclick = async () => {
+    const confirmed = confirm(
+      "Eliminare definitivamente questo PDF?\n" +
+      (record.document_name || "Documento PDF")
+    );
+    if (!confirmed) return;
+
+    deleteButton.disabled = true;
+    deleteStatus.textContent = "Eliminazione in corso…";
+    let storageDone = false;
+
+    try {
+      const { error: storageError } = await supabaseClient.storage
+        .from(bucket)
+        .remove([record.file_path]);
+
+      if (storageError) throw storageError;
+      storageDone = true;
+
+      const { error: recordError } = await supabaseClient
+        .from("employee_documents")
+        .delete()
+        .eq("id", record.id)
+        .eq("employee_id", record.employee_id)
+        .select("id")
+        .single();
+
+      if (recordError) throw recordError;
+      item.remove();
+    } catch (error) {
+      deleteStatus.textContent = storageDone
+        ? "Rimozione del PDF richiesta, ma la voce è ancora in elenco. " +
+          "Ricarica la pagina e riprova se la voce è ancora presente."
+        : "Eliminazione non riuscita. Riprova.";
+      console.error("Errore eliminazione PDF:", error);
+      deleteButton.disabled = false;
+    }
+  };
+
+  item.append(deleteButton, deleteStatus);
+}
 if (isAdmin &&
     record.document_type?.trim().toLowerCase() === "busta paga") {
   const resend = document.createElement("button");
